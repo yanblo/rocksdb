@@ -553,6 +553,7 @@ class DBImpl : public DB {
   void AddToLogsToFreeQueue(log::Writer* log_writer) {
     logs_to_free_queue_.push_back(log_writer);
   }
+  void ScheduleCompaction(ColumnFamilyData* cfd);
 
   Status NewDB();
 

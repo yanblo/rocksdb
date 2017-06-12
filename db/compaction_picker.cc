@@ -991,6 +991,8 @@ class LevelCompactionBuilder {
   // in Intra-L0 compactions)
   void SetupInitialFiles();
 
+  void SetupInitialFilesForRead();
+
   // If the initial files are from L0 level, pick other L0
   // files if needed.
   bool SetupOtherL0FilesIfNeeded();
@@ -1092,6 +1094,65 @@ void LevelCompactionBuilder::PickFilesMarkedForCompaction() {
   start_level_inputs_.files.clear();
 }
 
+void LevelCompactionBuilder::SetupInitialFilesForRead() {
+  FileMetaData* file_to_compact = vstorage_->file_to_compact_for_read()->load();
+  int level = vstorage_->num_non_empty_levels();
+  if (file_to_compact != nullptr) {
+    // We don't know which level is the file from. We'll search for
+    // it level by level.
+
+    // Level 0
+    const std::vector<FileMetaData*>& l0_files = vstorage_->LevelFiles(0);
+    for (FileMetaData* f : l0_files) {
+      if (f == file_to_compact) {
+        level = 0;
+        break;
+      }
+    }
+
+    // Othr levels
+    if (level != 0) {
+      for (int i = vstorage_->base_level();
+           i < vstorage_->num_non_empty_levels() - 1; i++) {
+        // We have to binary search to find the file.
+        std::vector<FileMetaData*> tmp_inputs;
+        int tmp_file_index;
+        vstorage_->GetOverlappingInputsRangeBinarySearch(
+            i, file_to_compact->smallest.user_key(),
+            file_to_compact->largest.user_key(), &tmp_inputs, -1,
+            &tmp_file_index, false);
+        if (!tmp_inputs.empty()) {
+          for (FileMetaData* f : tmp_inputs) {
+            if (f == file_to_compact) {
+              level = i;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (level < vstorage_->num_non_empty_levels() - 1) {
+      // Found the file which is not in the last level
+      start_level_inputs_.files = {file_to_compact};
+      start_level_inputs_.level = start_level_ = level;
+      output_level_ =
+          (start_level_ == 0) ? vstorage_->base_level() : start_level_ + 1;
+      compaction_reason_ = CompactionReason::kReadTriggered;
+      if (!compaction_picker_->ExpandInputsToCleanCut(cf_name_, vstorage_,
+                                                      &start_level_inputs_)) {
+        start_level_inputs_.clear();
+      }
+    }
+
+    if (start_level_inputs_.empty()) {
+      // Not found a compaction. We picked a file not qualify for compaction
+      // Reset the stats.
+      vstorage_->file_to_compact_for_read()->store(nullptr);
+    }
+  }
+}
+
 void LevelCompactionBuilder::SetupInitialFiles() {
   // Find the compactions by size on all levels.
   bool skipped_l0_to_base = false;
@@ -1153,6 +1214,9 @@ void LevelCompactionBuilder::SetupInitialFiles() {
     if (!start_level_inputs_.empty()) {
       compaction_reason_ = CompactionReason::kFilesMarkedForCompaction;
     }
+  }
+  if (start_level_inputs_.empty()) {
+    SetupInitialFilesForRead();
   }
 }
 

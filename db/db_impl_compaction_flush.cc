@@ -970,6 +970,13 @@ Status DBImpl::EnableAutoCompaction(
   return s;
 }
 
+void DBImpl::ScheduleCompaction(ColumnFamilyData* cfd) {
+  InstrumentedMutexLock l(&mutex_);
+  AddToCompactionQueue(cfd);
+  ++unscheduled_compactions_;
+  MaybeScheduleFlushOrCompaction();
+}
+
 void DBImpl::MaybeScheduleFlushOrCompaction() {
   mutex_.AssertHeld();
   if (!opened_successfully_) {

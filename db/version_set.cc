@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include "db/compaction.h"
+#include "db/db_impl.h"
 #include "db/internal_stats.h"
 #include "db/log_reader.h"
 #include "db/log_writer.h"
@@ -57,6 +58,15 @@
 namespace rocksdb {
 
 namespace {
+
+// If num_reads > file_sie / kReadCompRatio, trigger a compaction
+// This ratio indicates that for a 64MB file, if the file is
+// read about a million times, it is qualified to be compacted.
+// We pick a conservative number to avoid big write amp regression.
+const uint64_t kReadCompRatio = 64;
+// No read compaction can be triggered before this many times
+// a file is read.
+const uint64_t kMinReadTriggerCount = 100000;
 
 // Find File in LevelFilesBrief data structure
 // Within an index range defined by left and right
@@ -438,8 +448,8 @@ class LevelFileNumIterator : public InternalIterator {
                        const LevelFilesBrief* flevel, bool should_sample)
       : icmp_(icmp),
         flevel_(flevel),
-        index_(static_cast<uint32_t>(flevel->num_files)),
         current_value_(0, 0, 0),
+        index_(static_cast<uint32_t>(flevel->num_files)),
         should_sample_(should_sample) {  // Marks as invalid
   }
   virtual bool Valid() const override { return index_ < flevel_->num_files; }
@@ -486,10 +496,11 @@ class LevelFileNumIterator : public InternalIterator {
   virtual Status status() const override { return Status::OK(); }
 
  private:
+  Version* version_;
   const InternalKeyComparator icmp_;
   const LevelFilesBrief* flevel_;
-  uint32_t index_;
   mutable FileDescriptor current_value_;
+  uint32_t index_;
   bool should_sample_;
 };
 
@@ -573,6 +584,23 @@ class BaseReferencedVersionBuilder {
   Version* version_;
 };
 }  // anonymous namespace
+
+void Version::IncReadCount(FileMetaData* f) {
+  uint64_t c = sample_file_read_inc(f);
+  if (c >= kMinReadTriggerCount && c >= f->fd.file_size / kReadCompRatio &&
+      storage_info_.file_to_compact_for_read()->load(
+          std::memory_order_relaxed) == nullptr &&
+      !f->marked_for_read_compaction) {
+    FileMetaData* tmpnull = nullptr;
+    if (storage_info_.file_to_compact_for_read()->compare_exchange_strong(
+            tmpnull, f)) {
+      f->marked_for_read_compaction = true;
+      if (vset_->db_ != nullptr) {
+        vset_->db_->ScheduleCompaction(cfd());
+      }
+    }
+  }
+}
 
 Status Version::GetTableProperties(std::shared_ptr<const TableProperties>* tp,
                                    const FileMetaData* file_meta,
@@ -913,6 +941,7 @@ VersionStorageInfo::VersionStorageInfo(
       next_file_to_compact_by_size_(num_levels_),
       compaction_score_(num_levels_),
       compaction_level_(num_levels_),
+      file_to_compact_for_read_(nullptr),
       l0_delay_trigger_count_(0),
       accumulated_file_size_(0),
       accumulated_raw_key_size_(0),
@@ -998,7 +1027,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
   FdWithKeyRange* f = fp.GetNextFile();
   while (f != nullptr) {
     if (get_context.sample()) {
-      sample_file_read_inc(f->file_metadata);
+      IncReadCount(f->file_metadata);
     }
     *status = table_cache_->Get(
         read_options, *internal_comparator(), f->fd, ikey, &get_context,
@@ -1469,6 +1498,9 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, Logger* info_log) {
 #endif
   f->refs++;
   level_files->push_back(f);
+  f->marked_for_read_compaction =
+      false;  // This is hacky. We set to reconsider all files
+              // for read compaction after every version change.
 }
 
 // Version::PrepareApply() need to be called before calling the function, or
@@ -2270,7 +2302,8 @@ struct VersionSet::ManifestWriter {
 
 VersionSet::VersionSet(const std::string& dbname,
                        const ImmutableDBOptions* db_options,
-                       const EnvOptions& storage_options, Cache* table_cache,
+                       const EnvOptions& storage_options, DBImpl* db,
+                       Cache* table_cache,
                        WriteBufferManager* write_buffer_manager,
                        WriteController* write_controller)
     : column_family_set_(
@@ -2279,6 +2312,7 @@ VersionSet::VersionSet(const std::string& dbname,
       env_(db_options->env),
       dbname_(dbname),
       db_options_(db_options),
+      db_(db),
       next_file_number_(2),
       manifest_file_number_(0),  // Filled by Recover()
       pending_manifest_file_number_(0),
@@ -3034,7 +3068,8 @@ Status VersionSet::ReduceNumberOfLevels(const std::string& dbname,
                                         options->table_cache_numshardbits));
   WriteController wc(options->delayed_write_rate);
   WriteBufferManager wb(options->db_write_buffer_size);
-  VersionSet versions(dbname, &db_options, env_options, tc.get(), &wb, &wc);
+  VersionSet versions(dbname, &db_options, env_options, nullptr /* DB */,
+                      tc.get(), &wb, &wc);
   Status status;
 
   std::vector<ColumnFamilyDescriptor> dummy;

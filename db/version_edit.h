@@ -108,6 +108,7 @@ struct FileMetaData {
 
   bool marked_for_compaction;  // True if client asked us nicely to compact this
                                // file.
+  bool marked_for_read_compaction;  // May need to be changed to atomic.
 
   FileMetaData()
       : smallest_seqno(kMaxSequenceNumber),
@@ -121,7 +122,8 @@ struct FileMetaData {
         refs(0),
         being_compacted(false),
         init_stats_from_file(false),
-        marked_for_compaction(false) {}
+        marked_for_compaction(false),
+        marked_for_read_compaction(false) {}
 
   // REQUIRED: Keys must be given to the function in sorted order (it expects
   // the last key to be the largest).

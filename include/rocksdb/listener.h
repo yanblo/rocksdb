@@ -75,6 +75,7 @@ enum class CompactionReason {
   kManualCompaction,
   // DB::SuggestCompactRange() marked files for compaction
   kFilesMarkedForCompaction,
+  kReadTriggered,
 };
 
 #ifndef ROCKSDB_LITE

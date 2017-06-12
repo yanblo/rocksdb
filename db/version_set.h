@@ -357,6 +357,10 @@ class VersionStorageInfo {
 
   bool force_consistency_checks() const { return force_consistency_checks_; }
 
+  std::atomic<FileMetaData*>* file_to_compact_for_read() {
+    return &file_to_compact_for_read_;
+  }
+
  private:
   const InternalKeyComparator* internal_comparator_;
   const Comparator* user_comparator_;
@@ -413,6 +417,8 @@ class VersionStorageInfo {
   // These are used to pick the best compaction level
   std::vector<double> compaction_score_;
   std::vector<int> compaction_level_;
+  std::atomic<FileMetaData*> file_to_compact_for_read_;
+
   int l0_delay_trigger_count_ = 0;  // Count used to trigger slow down and stop
                                     // for number of L0 files.
 
@@ -539,6 +545,8 @@ class Version {
 
   size_t GetMemoryUsageByTableReaders();
 
+  void IncReadCount(FileMetaData* f);
+
   ColumnFamilyData* cfd() const { return cfd_; }
 
   // Return the next Version in the linked list. Used for debug only
@@ -616,8 +624,11 @@ class Version {
 
 class VersionSet {
  public:
+  // `db` is only used to schedule compaction jobs. If it is not a live DB,
+  // nullptr can be passed to indicate that no compaction needs to be
+  // scheduled.
   VersionSet(const std::string& dbname, const ImmutableDBOptions* db_options,
-             const EnvOptions& env_options, Cache* table_cache,
+             const EnvOptions& env_options, DBImpl* db, Cache* table_cache,
              WriteBufferManager* write_buffer_manager,
              WriteController* write_controller);
   ~VersionSet();
@@ -800,6 +811,7 @@ class VersionSet {
   Env* const env_;
   const std::string dbname_;
   const ImmutableDBOptions* const db_options_;
+  DBImpl* db_;
   std::atomic<uint64_t> next_file_number_;
   uint64_t manifest_file_number_;
   uint64_t options_file_number_;
