@@ -67,7 +67,7 @@ class MemTableListTest : public testing::Test {
     WriteController write_controller(10000000u);
 
     CreateDB();
-    VersionSet versions(dbname, &immutable_db_options, env_options,
+    VersionSet versions(dbname, &immutable_db_options, env_options, nullptr,
                         table_cache.get(), &write_buffer_manager,
                         &write_controller);
 

@@ -970,6 +970,16 @@ Status DBImpl::EnableAutoCompaction(
   return s;
 }
 
+void DBImpl::ScheduleCompactionIfIdle(ColumnFamilyData* cfd) {
+  InstrumentedMutexLock l(&mutex_);
+  if (unscheduled_compactions_ == 0 && bg_compaction_scheduled_ == 0) {
+    // Schedule read triggered compaction only if there isn't pending compation.
+    AddToCompactionQueue(cfd);
+    ++unscheduled_compactions_;
+    MaybeScheduleFlushOrCompaction();
+  }
+}
+
 void DBImpl::MaybeScheduleFlushOrCompaction() {
   mutex_.AssertHeld();
   if (!opened_successfully_) {

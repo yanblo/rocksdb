@@ -12,14 +12,14 @@
 namespace rocksdb {
 static const uint32_t kFileReadSampleRate = 1024;
 extern bool should_sample_file_read();
-extern void sample_file_read_inc(FileMetaData*);
+extern uint64_t sample_file_read_inc(FileMetaData*);
 
 inline bool should_sample_file_read() {
   return (Random::GetTLSInstance()->Next() % kFileReadSampleRate == 307);
 }
 
-inline void sample_file_read_inc(FileMetaData* meta) {
-  meta->stats.num_reads_sampled.fetch_add(kFileReadSampleRate,
-                                          std::memory_order_relaxed);
+inline uint64_t sample_file_read_inc(FileMetaData* meta) {
+  return meta->stats.num_reads_sampled.fetch_add(kFileReadSampleRate,
+                                                 std::memory_order_relaxed);
 }
 }
