@@ -3578,7 +3578,7 @@ void VersionSet::AddLiveFiles(std::vector<FileDescriptor>* live_list) {
   }
 }
 
-InternalIterator* VersionSet::MakeInputIterator(
+MergingIterator* VersionSet::MakeInputIterator(
     const Compaction* c, RangeDelAggregator* range_del_agg) {
   auto cfd = c->column_family_data();
   ReadOptions read_options;
@@ -3628,7 +3628,7 @@ InternalIterator* VersionSet::MakeInputIterator(
     }
   }
   assert(num <= space);
-  InternalIterator* result =
+  MergingIterator* result =
       NewMergingIterator(&c->column_family_data()->internal_comparator(), list,
                          static_cast<int>(num));
   delete[] list;

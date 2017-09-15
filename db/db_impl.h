@@ -44,6 +44,7 @@
 #include "rocksdb/status.h"
 #include "rocksdb/transaction_log.h"
 #include "rocksdb/write_buffer_manager.h"
+#include "table/merging_iterator.h"
 #include "table/scoped_arena_iterator.h"
 #include "util/autovector.h"
 #include "util/event_logger.h"
@@ -60,6 +61,7 @@ class VersionEdit;
 class VersionSet;
 class Arena;
 class WriteCallback;
+class MergingIterator;
 struct JobContext;
 struct ExternalSstFileInfo;
 struct MemTableInfo;
@@ -319,7 +321,7 @@ class DBImpl : public DB {
   // Return an internal iterator over the current state of the database.
   // The keys of this iterator are internal keys (see format.h).
   // The returned iterator should be deleted when no longer needed.
-  InternalIterator* NewInternalIterator(
+  MergingIterator* NewInternalIterator(
       Arena* arena, RangeDelAggregator* range_del_agg,
       ColumnFamilyHandle* column_family = nullptr);
 
@@ -497,11 +499,11 @@ class DBImpl : public DB {
 
   const WriteController& write_controller() { return write_controller_; }
 
-  InternalIterator* NewInternalIterator(const ReadOptions&,
-                                        ColumnFamilyData* cfd,
-                                        SuperVersion* super_version,
-                                        Arena* arena,
-                                        RangeDelAggregator* range_del_agg);
+  MergingIterator* NewInternalIterator(const ReadOptions&,
+                                       ColumnFamilyData* cfd,
+                                       SuperVersion* super_version,
+                                       Arena* arena,
+                                       RangeDelAggregator* range_del_agg);
 
   // hollow transactions shell used for recovery.
   // these will then be passed to TransactionDB so that

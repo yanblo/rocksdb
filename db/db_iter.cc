@@ -104,7 +104,7 @@ class DBIter final: public Iterator {
 
   DBIter(Env* _env, const ReadOptions& read_options,
          const ImmutableCFOptions& cf_options, const Comparator* cmp,
-         InternalIterator* iter, SequenceNumber s, bool arena_mode,
+         MergingIterator* iter, SequenceNumber s, bool arena_mode,
          uint64_t max_sequential_skip_in_iterations)
       : arena_mode_(arena_mode),
         env_(_env),
@@ -147,7 +147,7 @@ class DBIter final: public Iterator {
       iter_->~InternalIterator();
     }
   }
-  virtual void SetIter(InternalIterator* iter) {
+  virtual void SetIter(MergingIterator* iter) {
     assert(iter_ == nullptr);
     iter_ = iter;
     iter_->SetPinnedItersMgr(&pinned_iters_mgr_);
@@ -259,7 +259,7 @@ class DBIter final: public Iterator {
   Logger* logger_;
   const Comparator* const user_comparator_;
   const MergeOperator* const merge_operator_;
-  InternalIterator* iter_;
+  MergingIterator* iter_;
   SequenceNumber sequence_;
 
   Status status_;
@@ -1159,11 +1159,11 @@ void DBIter::SeekToLast() {
 Iterator* NewDBIterator(Env* env, const ReadOptions& read_options,
                         const ImmutableCFOptions& cf_options,
                         const Comparator* user_key_comparator,
-                        InternalIterator* internal_iter,
+                        MergingIterator* merging_iter,
                         const SequenceNumber& sequence,
                         uint64_t max_sequential_skip_in_iterations) {
   DBIter* db_iter = new DBIter(env, read_options, cf_options,
-                               user_key_comparator, internal_iter, sequence,
+                               user_key_comparator, merging_iter, sequence,
                                false, max_sequential_skip_in_iterations);
   return db_iter;
 }
@@ -1174,7 +1174,7 @@ RangeDelAggregator* ArenaWrappedDBIter::GetRangeDelAggregator() {
   return db_iter_->GetRangeDelAggregator();
 }
 
-void ArenaWrappedDBIter::SetIterUnderDBIter(InternalIterator* iter) {
+void ArenaWrappedDBIter::SetIterUnderDBIter(MergingIterator* iter) {
   static_cast<DBIter*>(db_iter_)->SetIter(iter);
 }
 
@@ -1234,7 +1234,7 @@ Status ArenaWrappedDBIter::Refresh() {
          sv->mutable_cf_options.max_sequential_skip_in_iterations,
          cur_sv_number);
 
-    InternalIterator* internal_iter = db_impl_->NewInternalIterator(
+    MergingIterator* internal_iter = db_impl_->NewInternalIterator(
         read_options_, cfd_, sv, &arena_, db_iter_->GetRangeDelAggregator());
     SetIterUnderDBIter(internal_iter);
   } else {

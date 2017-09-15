@@ -728,7 +728,7 @@ SequenceNumber DBImpl::GetLatestSequenceNumber() const {
   return versions_->LastSequence();
 }
 
-InternalIterator* DBImpl::NewInternalIterator(
+MergingIterator* DBImpl::NewInternalIterator(
     Arena* arena, RangeDelAggregator* range_del_agg,
     ColumnFamilyHandle* column_family) {
   ColumnFamilyData* cfd;
@@ -846,11 +846,11 @@ static void CleanupIteratorState(void* arg1, void* arg2) {
 }
 }  // namespace
 
-InternalIterator* DBImpl::NewInternalIterator(
+MergingIterator* DBImpl::NewInternalIterator(
     const ReadOptions& read_options, ColumnFamilyData* cfd,
     SuperVersion* super_version, Arena* arena,
     RangeDelAggregator* range_del_agg) {
-  InternalIterator* internal_iter;
+  MergingIterator* internal_iter;
   assert(arena != nullptr);
   assert(range_del_agg != nullptr);
   // Need to create internal iterator from the arena.
@@ -890,7 +890,7 @@ InternalIterator* DBImpl::NewInternalIterator(
 
     return internal_iter;
   }
-  return NewErrorInternalIterator(s);
+  return WrapToMergingIterator(NewErrorInternalIterator(s));
 }
 
 ColumnFamilyHandle* DBImpl::DefaultColumnFamily() const {
@@ -1406,7 +1406,7 @@ Iterator* DBImpl::NewIterator(const ReadOptions& read_options,
     return nullptr;
 #else
     SuperVersion* sv = cfd->GetReferencedSuperVersion(&mutex_);
-    auto iter = new ForwardIterator(this, read_options, cfd, sv);
+    MergingIterator* iter = WrapToMergingIterator(new ForwardIterator(this, read_options, cfd, sv));
     return NewDBIterator(
         env_, read_options, *cfd->ioptions(), cfd->user_comparator(), iter,
         kMaxSequenceNumber,
@@ -1470,7 +1470,7 @@ Iterator* DBImpl::NewIterator(const ReadOptions& read_options,
         sv->version_number,
         ((read_options.snapshot != nullptr) ? nullptr : this), cfd);
 
-    InternalIterator* internal_iter =
+    MergingIterator* internal_iter =
         NewInternalIterator(read_options, cfd, sv, db_iter->GetArena(),
                             db_iter->GetRangeDelAggregator());
     db_iter->SetIterUnderDBIter(internal_iter);
@@ -1515,7 +1515,7 @@ Status DBImpl::NewIterators(
     for (auto cfh : column_families) {
       auto cfd = reinterpret_cast<ColumnFamilyHandleImpl*>(cfh)->cfd();
       SuperVersion* sv = cfd->GetReferencedSuperVersion(&mutex_);
-      auto iter = new ForwardIterator(this, read_options, cfd, sv);
+      MergingIterator* iter = WrapToMergingIterator(new ForwardIterator(this, read_options, cfd, sv));
       iterators->push_back(NewDBIterator(
           env_, read_options, *cfd->ioptions(), cfd->user_comparator(), iter,
           kMaxSequenceNumber,
@@ -1541,7 +1541,7 @@ Status DBImpl::NewIterators(
           sv->mutable_cf_options.max_sequential_skip_in_iterations,
           sv->version_number,
           ((read_options.snapshot != nullptr) ? nullptr : this), cfd);
-      InternalIterator* internal_iter =
+      MergingIterator* internal_iter =
           NewInternalIterator(read_options, cfd, sv, db_iter->GetArena(),
                               db_iter->GetRangeDelAggregator());
       db_iter->SetIterUnderDBIter(internal_iter);

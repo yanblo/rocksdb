@@ -16,6 +16,7 @@
 #include "options/cf_options.h"
 #include "rocksdb/db.h"
 #include "rocksdb/iterator.h"
+#include "table/merging_iterator.h"
 #include "util/arena.h"
 #include "util/autovector.h"
 
@@ -31,7 +32,7 @@ class InternalIterator;
 extern Iterator* NewDBIterator(Env* env, const ReadOptions& read_options,
                                const ImmutableCFOptions& cf_options,
                                const Comparator* user_key_comparator,
-                               InternalIterator* internal_iter,
+                               MergingIterator* merging_iter,
                                const SequenceNumber& sequence,
                                uint64_t max_sequential_skip_in_iterations);
 
@@ -51,7 +52,7 @@ class ArenaWrappedDBIter : public Iterator {
 
   // Set the internal iterator wrapped inside the DB Iterator. Usually it is
   // a merging iterator.
-  virtual void SetIterUnderDBIter(InternalIterator* iter);
+  virtual void SetIterUnderDBIter(MergingIterator* iter);
   virtual bool Valid() const override;
   virtual void SeekToFirst() override;
   virtual void SeekToLast() override;

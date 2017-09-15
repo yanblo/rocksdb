@@ -42,6 +42,7 @@
 #include "db/write_controller.h"
 #include "monitoring/instrumented_mutex.h"
 #include "options/db_options.h"
+#include "table/merging_iterator.h"
 #include "port/port.h"
 #include "rocksdb/env.h"
 
@@ -749,8 +750,8 @@ class VersionSet {
 
   // Create an iterator that reads over the compaction inputs for "*c".
   // The caller should delete the iterator when no longer needed.
-  InternalIterator* MakeInputIterator(const Compaction* c,
-                                      RangeDelAggregator* range_del_agg);
+  MergingIterator* MakeInputIterator(const Compaction* c,
+                                     RangeDelAggregator* range_del_agg);
 
   // Add all files listed in any live version to *live.
   void AddLiveFiles(std::vector<FileDescriptor>* live_list);
