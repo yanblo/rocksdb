@@ -181,13 +181,13 @@ TEST_F(VersionEditTest, ColumnFamilyTest) {
   TestEncodeDecode(edit);
 }
 
-TEST_F(VersionEditTest, DeletedLogNumber) {
+TEST_F(VersionEditTest, MinLogNumberToKeep) {
   VersionEdit edit;
-  edit.SetDeletedLogNumber(13);
+  edit.SetMinLogNumberToKeep(13);
   TestEncodeDecode(edit);
 
   edit.Clear();
-  edit.SetDeletedLogNumber(23);
+  edit.SetMinLogNumberToKeep(23);
   TestEncodeDecode(edit);
 }
 
