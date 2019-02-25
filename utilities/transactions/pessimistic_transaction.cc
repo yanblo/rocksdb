@@ -548,11 +548,15 @@ Status PessimisticTransaction::TryLock(ColumnFamilyHandle* column_family,
     }
   }
 
+  // The key is already tracked and locked, and it's not a upgrading case.
+  // No need to do anything.
+  if (previously_locked && !lock_upgrade) {
+    return s;
+  }
+
   // Lock this key if this transactions hasn't already locked it or we require
   // an upgrade.
-  if (!previously_locked || lock_upgrade) {
-    s = txn_db_impl_->TryLock(this, cfh_id, key_str, exclusive);
-  }
+  s = txn_db_impl_->TryLock(this, cfh_id, key_str, exclusive);
 
   SetSnapshotIfNeeded();
 
