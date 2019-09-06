@@ -85,6 +85,7 @@ get_lib_base jemalloc   LATEST  platform007
 get_lib_base numa       LATEST  platform007
 get_lib_base libunwind  LATEST  platform007
 get_lib_base tbb        LATEST  platform007
+get_lib_base liburing   LATEST  platform007
 
 get_lib_base kernel-headers fb platform007
 get_lib_base binutils   LATEST centos7-native
@@ -124,6 +125,7 @@ get_lib_base jemalloc   LATEST  gcc-5-glibc-2.23
 get_lib_base numa       LATEST  gcc-5-glibc-2.23
 get_lib_base libunwind  LATEST  gcc-5-glibc-2.23
 get_lib_base tbb        LATEST  gcc-5-glibc-2.23
+get_lib_base liburing   LATEST  gcc-5-glibc-2.23
 
 get_lib_base kernel-headers 4.0.9-36_fbk5_2933_gd092e3f gcc-5-glibc-2.23
 get_lib_base binutils   LATEST centos7-native
