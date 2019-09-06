@@ -12,7 +12,8 @@ function log_variable()
 }
 
 
-TP2_LATEST="/mnt/vol/engshare/fbcode/third-party2"
+TP2_LATEST="/data/users/sdong/fbsource/fbcode/third-party2"
+#TP2_LATEST="/mnt/vol/engshare/fbcode/third-party2"
 ## $1 => lib name
 ## $2 => lib version (if not provided, will try to pick latest)
 ## $3 => platform (if not provided, will try to pick latest gcc)
@@ -67,7 +68,7 @@ echo "Writing dependencies to $OUTPUT"
 
 # Compilers locations
 GCC_BASE=`readlink -f $TP2_LATEST/gcc/7.x/centos7-native/*/`
-CLANG_BASE=`readlink -f $TP2_LATEST/llvm-fb/stable/centos7-native/*/`
+CLANG_BASE=`readlink -f $TP2_LATEST/llvm-fb/9.0.0/centos7-native/*/`
 
 log_variable GCC_BASE
 log_variable CLANG_BASE
@@ -107,7 +108,7 @@ echo "Writing dependencies to $OUTPUT"
 
 # Compilers locations
 GCC_BASE=`readlink -f $TP2_LATEST/gcc/5.x/centos7-native/*/`
-CLANG_BASE=`readlink -f $TP2_LATEST/llvm-fb/stable/centos7-native/*/`
+CLANG_BASE=`readlink -f $TP2_LATEST/llvm-fb/9.0.0/centos7-native/*/`
 
 log_variable GCC_BASE
 log_variable CLANG_BASE
@@ -125,7 +126,7 @@ get_lib_base jemalloc   LATEST  gcc-5-glibc-2.23
 get_lib_base numa       LATEST  gcc-5-glibc-2.23
 get_lib_base libunwind  LATEST  gcc-5-glibc-2.23
 get_lib_base tbb        LATEST  gcc-5-glibc-2.23
-get_lib_base liburing   LATEST  gcc-5-glibc-2.23
+get_lib_base liburing   20190503  gcc-5-glibc-2.23
 
 get_lib_base kernel-headers 4.0.9-36_fbk5_2933_gd092e3f gcc-5-glibc-2.23
 get_lib_base binutils   LATEST centos7-native
