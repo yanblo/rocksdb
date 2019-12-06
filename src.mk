@@ -265,7 +265,13 @@ BENCH_LIB_SOURCES =                                             \
   tools/db_bench_tool.cc                                        \
 
 STRESS_LIB_SOURCES =                                            \
-  tools/db_stress_tool.cc                                       \
+  db_stress_tool/batched_ops_stress.cc                         \
+  db_stress_tool/cf_consistency_stress.cc                      \
+  db_stress_tool/db_stress_common.cc                           \
+  db_stress_tool/db_stress_test_base.cc                        \
+  db_stress_tool/db_stress_gflags.cc                           \
+  db_stress_tool/db_stress_tool.cc                             \
+  db_stress_tool/no_batched_ops_stress.cc                      \
 
 TEST_LIB_SOURCES =                                              \
   db/db_test_util.cc                                            \
@@ -283,6 +289,7 @@ FOLLY_SOURCES = \
 MAIN_SOURCES =                                                          \
   cache/cache_bench.cc                                                  \
   cache/cache_test.cc                                                   \
+  db_stress_tool/db_stress.cc                                           \
   db/column_family_test.cc                                              \
   db/compact_files_test.cc                                              \
   db/compaction/compaction_iterator_test.cc                             \
@@ -398,7 +405,6 @@ MAIN_SOURCES =                                                          \
   tools/db_bench.cc                                                     \
   tools/db_bench_tool_test.cc                                           \
   tools/db_sanity_test.cc                                               \
-  tools/db_stress.cc                                                    \
   tools/ldb_cmd_test.cc                                                 \
   tools/reduce_levels_test.cc                                           \
   tools/sst_dump_test.cc                                                \
