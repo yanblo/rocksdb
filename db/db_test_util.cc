@@ -328,6 +328,8 @@ Options DBTestBase::GetDefaultOptions() {
   options.max_open_files = 5000;
   options.wal_recovery_mode = WALRecoveryMode::kTolerateCorruptedTailRecords;
   options.compaction_pri = CompactionPri::kByCompensatedSize;
+  options.memtable_whole_key_filtering = false;
+  options.memtable_prefix_bloom_size_ratio = 0;
   return options;
 }
 
